@@ -166,3 +166,7 @@ zstandard==0.25.0
 fastapi
 uvicorn[standard]
 pytesseract
+langchain
+langchain-community
+langchain-chroma
+langchain-huggingface
