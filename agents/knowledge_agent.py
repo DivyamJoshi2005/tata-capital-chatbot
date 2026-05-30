@@ -1,33 +1,26 @@
-# in agents/knowledge_agent.py
-
 import asyncio
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+import os
+import pickle
 
-# Define the path to your persistent ChromaDB directory and the embedding model
-CHROMA_DB_PATH = "chroma_db"
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+BM25_INDEX_PATH = "bm25_index.pkl"
 
-# --- Initialize components once when the module is loaded ---
-# This is more efficient than reloading the model and DB on every call.
 try:
-    print("Knowledge Agent: Initializing embedding model...")
-    embedding_function = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
-
-    print(f"Knowledge Agent: Loading vector store from '{CHROMA_DB_PATH}'...")
-    vector_store = Chroma(
-        persist_directory=CHROMA_DB_PATH,
-        embedding_function=embedding_function
-    )
-    print("Knowledge Agent: Vector store loaded successfully.")
+    print(f"Knowledge Agent: Loading BM25 Index from '{BM25_INDEX_PATH}'...")
+    if os.path.exists(BM25_INDEX_PATH):
+        with open(BM25_INDEX_PATH, 'rb') as f:
+            retriever = pickle.load(f)
+        print("Knowledge Agent: BM25 Index loaded successfully.")
+    else:
+        print("Knowledge Agent: No BM25 index found. Please run ingest.py first.")
+        retriever = None
 except Exception as e:
-    print(f"FATAL: Could not load vector store. Make sure you have run ingest.py first. Error: {e}")
-    vector_store = None
+    print(f"FATAL: Could not load BM25 index. Error: {e}")
+    retriever = None
 
 
 async def knowledge_retrieval_agent(user_query: str, k: int = 3) -> str:
     """
-    Retrieves the most relevant information from the knowledge base (ChromaDB).
+    Retrieves the most relevant information from the knowledge base using BM25 keyword search.
 
     Args:
         user_query: The user's question or message.
@@ -36,13 +29,15 @@ async def knowledge_retrieval_agent(user_query: str, k: int = 3) -> str:
     Returns:
         A formatted string containing the retrieved information, or an error message.
     """
-    if vector_store is None:
+    if retriever is None:
         return "Error: Knowledge base is not available."
 
     try:
         print(f"   - Knowledge Agent: Searching for '{user_query}'...")
-        # Perform a similarity search in the vector database
-        retrieved_docs = await asyncio.to_thread(vector_store.similarity_search, user_query, k=k)
+        # Since BM25 is CPU-bound, we still run it in a thread to avoid blocking the async event loop
+        # We need to temporarily set the 'k' parameter on the retriever
+        retriever.k = k
+        retrieved_docs = await asyncio.to_thread(retriever.invoke, user_query)
 
         if not retrieved_docs:
             return "No specific product information found. Please answer based on general knowledge."

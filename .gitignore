@@ -14,7 +14,7 @@ __pycache__/
 
 # Databases
 chat_history.db
-chroma_db/
+bm25_index.pkl
 
 # MacOS
 .DS_Store
