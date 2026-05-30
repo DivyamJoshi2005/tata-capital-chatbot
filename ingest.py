@@ -1,8 +1,11 @@
 import json
 import os
 import pickle
-from langchain.docstore.document import Document
+# pyrefly: ignore [missing-import]
+from langchain_core.documents import Document
+# pyrefly: ignore [missing-import]
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+# pyrefly: ignore [missing-import]
 from langchain_community.retrievers import BM25Retriever
 
 JSON_DATA_PATH = "data/tata_bfsi_data.json"
