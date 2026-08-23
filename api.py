@@ -42,6 +42,13 @@ if not api_key:
 # Initialize the Groq client
 client = AsyncGroq(api_key=api_key)
 
+# --- Auto-generate BM25 index if missing ---
+from ingest import BM25_INDEX_PATH, create_knowledge_base_from_json
+if not os.path.exists(BM25_INDEX_PATH):
+    print("⚠️  BM25 index not found. Running ingestion automatically...")
+    create_knowledge_base_from_json()
+    print("✅ Ingestion complete.")
+
 # Import the master_agent AFTER configuring everything
 from main import master_agent
 

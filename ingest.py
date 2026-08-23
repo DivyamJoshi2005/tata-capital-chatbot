@@ -8,8 +8,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 # pyrefly: ignore [missing-import]
 from langchain_community.retrievers import BM25Retriever
 
-JSON_DATA_PATH = "data/tata_bfsi_data.json"
-BM25_INDEX_PATH = "bm25_index.pkl"
+# Use absolute paths relative to this file's directory so it works from any CWD
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_DATA_PATH = os.path.join(BASE_DIR, "data", "tata_bfsi_data.json")
+BM25_INDEX_PATH = os.path.join(BASE_DIR, "bm25_index.pkl")
 
 def create_knowledge_base_from_json():
     """

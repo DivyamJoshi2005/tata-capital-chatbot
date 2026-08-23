@@ -3,11 +3,22 @@ import os
 import uuid
 import json
 
-DB_FILE = "chat_history.db"
+# Use an absolute path so the DB is always created next to this file,
+# regardless of what CWD the server is started from.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "chat_history.db")
+
+
+def _get_connection():
+    """Creates a connection with WAL mode and async-safe settings."""
+    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
 
 def init_db():
     """Initializes the database and creates tables if they don't exist."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     # Sessions table
@@ -37,7 +48,7 @@ def init_db():
 def create_session(title: str = "New Chat") -> str:
     """Creates a new chat session and returns its ID."""
     session_id = str(uuid.uuid4())
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     cursor = conn.cursor()
     cursor.execute('INSERT INTO sessions (id, title) VALUES (?, ?)', (session_id, title))
     conn.commit()
@@ -46,7 +57,7 @@ def create_session(title: str = "New Chat") -> str:
 
 def get_sessions() -> list:
     """Retrieves all chat sessions, ordered by most recent."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM sessions ORDER BY created_at DESC')
@@ -56,7 +67,7 @@ def get_sessions() -> list:
 
 def get_session_history(session_id: str) -> list:
     """Retrieves all messages for a specific session."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute('SELECT role, content FROM messages WHERE session_id = ? ORDER BY timestamp ASC', (session_id,))
@@ -66,7 +77,7 @@ def get_session_history(session_id: str) -> list:
 
 def add_message(session_id: str, role: str, content: str):
     """Adds a single message to a session."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     cursor = conn.cursor()
     cursor.execute('INSERT INTO messages (session_id, role, content) VALUES (?, ?, ?)', (session_id, role, content))
     conn.commit()
@@ -74,15 +85,7 @@ def add_message(session_id: str, role: str, content: str):
 
 def update_session_title(session_id: str, title: str):
     """Updates the title of a session (e.g., after the first message)."""
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute('UPDATE sessions SET title = ? WHERE id = ?', (title, session_id))
-    conn.commit()
-    conn.close()
-
-def update_session_title(session_id: str, title: str):
-    """Updates the title of a session (e.g., after the first message)."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     cursor = conn.cursor()
     cursor.execute('UPDATE sessions SET title = ? WHERE id = ?', (title, session_id))
     conn.commit()
@@ -90,7 +93,7 @@ def update_session_title(session_id: str, title: str):
 
 def delete_session(session_id: str):
     """Deletes a session and all its messages."""
-    conn = sqlite3.connect(DB_FILE)
+    conn = _get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM messages WHERE session_id = ?', (session_id,))
     cursor.execute('DELETE FROM sessions WHERE id = ?', (session_id,))

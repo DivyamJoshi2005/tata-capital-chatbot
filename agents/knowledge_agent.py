@@ -2,7 +2,9 @@ import asyncio
 import os
 import pickle
 
-BM25_INDEX_PATH = "bm25_index.pkl"
+# Resolve path relative to the project root (parent of this file's directory)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BM25_INDEX_PATH = os.path.join(PROJECT_ROOT, "bm25_index.pkl")
 
 try:
     print(f"Knowledge Agent: Loading BM25 Index from '{BM25_INDEX_PATH}'...")
