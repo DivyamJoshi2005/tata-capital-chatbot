@@ -57,6 +57,7 @@ class ChatRequest(BaseModel):
     message: str
     image_base64: Optional[str] = None
     session_id: Optional[str] = None
+    model_name: Optional[str] = None
 
 class SessionResponse(BaseModel):
     id: str
@@ -88,7 +89,7 @@ async def create_session():
     return {"id": session_id, "title": "New Chat"}
 
 @app.get("/api/sessions/{session_id}/history")
-async def get_session_history(session_id: str):d
+async def get_session_history(session_id: str):
     return database.get_session_history(session_id)
 
 @app.delete("/api/sessions/{session_id}")
@@ -124,8 +125,44 @@ async def chat_endpoint(request: ChatRequest):
         database.add_message(session_id, "user", final_message)
 
         # 3. Call the Agent (Ollama or Groq)
-        reply = await master_agent(final_message, client, passed_history=history, model_name=model_name)
+        target_model = request.model_name if request.model_name else model_name
+        
+        if target_model == "compare_all":
+            import time
+            import urllib.request
+            import json
+            
+            def unload_all():
+                for m in ["deepseek-r1:1.5b", "llama3.2:3b", "qwen2.5:3b"]:
+                    try:
+                        req = urllib.request.Request("http://localhost:11434/api/generate", data=json.dumps({"model": m, "keep_alive": 0}).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+                        urllib.request.urlopen(req, timeout=2)
+                    except: pass
+                    
+            combined_reply = "Here is the comparison across all 3 models:\n\n"
+            for m in ["deepseek-r1:1.5b", "llama3.2:3b", "qwen2.5:3b"]:
+                unload_all()
+                t0 = time.time()
+                ans = await master_agent(final_message, client, passed_history=history, model_name=m)
+                t1 = time.time()
+                combined_reply += f"### 🤖 `{m}`\n{ans}\n\n*⏱️ Generated in {round(t1-t0, 1)}s*\n\n---\n\n"
+            
+            reply = combined_reply
+        else:
+            reply = await master_agent(final_message, client, passed_history=history, model_name=target_model)
 
+        import re
+        # Parse `<think>` tags into HTML details tags for the frontend
+        def format_think_tags(text):
+            pattern = re.compile(r'<think>(.*?)</think>', re.DOTALL)
+            replacement = r'<details className="mb-4 bg-[#1e1e1e] border border-[#333] rounded-lg overflow-hidden"><summary className="bg-[#2a2a2a] px-4 py-2 cursor-pointer text-sm font-semibold text-blue-400 hover:bg-[#333] transition-colors">🧠 View Model Reasoning</summary><div className="p-4 text-xs text-gray-400 italic bg-[#1e1e1e] whitespace-pre-wrap max-h-96 overflow-y-auto"></div></details>'
+            # Wait, react-markdown + rehype-raw requires standard HTML class attributes
+            # So `class="mb-4..."` instead of `className`!
+            replacement = r'<details class="mb-4 bg-[#1e1e1e] border border-[#333] rounded-lg overflow-hidden"><summary class="bg-[#2a2a2a] px-4 py-2 cursor-pointer text-sm font-semibold text-blue-400 hover:bg-[#333] transition-colors outline-none select-none">🧠 View Model Reasoning</summary><div class="p-4 text-xs text-gray-400 italic bg-[#1e1e1e] whitespace-pre-wrap max-h-96 overflow-y-auto"></div></details>'
+            return pattern.sub(replacement, text)
+
+        reply = format_think_tags(reply)
+        
         # Add assistant's reply to database
         database.add_message(session_id, "assistant", reply)
 
@@ -144,6 +181,16 @@ async def chat_endpoint(request: ChatRequest):
             detail="An internal error occurred while processing your request.",
         )
 
+
+
+@app.get("/api/eval-results")
+async def get_eval_results():
+    try:
+        import json
+        with open("eval_results.json", "r") as f:
+            return json.load(f)
+    except Exception as e:
+        return []
 
 # --- Serve the React frontend (production build) ---
 DIST_DIR = os.path.join(os.path.dirname(__file__), "frontend", "dist")
