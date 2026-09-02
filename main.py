@@ -7,10 +7,7 @@ from dotenv import load_dotenv
 # Import your agent functions
 from agents.knowledge_agent import knowledge_retrieval_agent
 from agents.conversation_agent import conversation_agent
-
-# Use Groq instead of Gemini
-# pyrefly: ignore [missing-import]
-from groq import AsyncGroq
+from llm_client import get_llm_client
 
 # Suppress warnings and logs
 os.environ["GRPC_VERBOSITY"] = "NONE"
@@ -24,11 +21,12 @@ conversation_state = {
     "conversation_history":[]
 }
 
-# --- NEW: Consolidated Analysis Agent ---
-async def run_analysis_agent(user_message: str, client: AsyncGroq) -> dict:
+# --- Consolidated Analysis Agent ---
+async def run_analysis_agent(user_message: str, client, model_name: str = None) -> dict:
     """
     A single agent that performs profiling, risk assessment, and persuasion strategy selection
-    in one API call using Groq JSON mode for maximum efficiency.
+    in one call using JSON mode for maximum efficiency.
+    Works seamlessly with both local Ollama (Llama 3.2 3B) and Groq.
     """
     prompt = f"""
     You are a multi-tasking financial analysis AI. Analyze the user's message and provide a complete analysis.
@@ -45,15 +43,18 @@ async def run_analysis_agent(user_message: str, client: AsyncGroq) -> dict:
     - "tactic": A string containing the chosen persuasion tactic.
     """
     try:
-        response = await client.chat.completions.create(
-            messages=[
+        kwargs = {
+            "messages": [
                 {"role": "system", "content": "You are a JSON analysis bot. Always output valid JSON."},
                 {"role": "user", "content": prompt}
             ],
-            model="llama-3.3-70b-versatile",
-            response_format={"type": "json_object"},
-            temperature=0.1,
-        )
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
+        }
+        if model_name:
+            kwargs["model"] = model_name
+
+        response = await client.chat.completions.create(**kwargs)
         cleaned_response = response.choices[0].message.content.strip()
         analysis = json.loads(cleaned_response)
         return analysis
@@ -61,26 +62,26 @@ async def run_analysis_agent(user_message: str, client: AsyncGroq) -> dict:
         print(f"Error in consolidated analysis agent: {e}")
         # Return a safe default structure on error
         return {
-            "profile": {"sentiment": "unknown", "literacy": "unknown", "persona": "unknown"},
+            "profile": {"sentiment": "neutral", "literacy": "medium", "persona": "Inquirer"},
             "risk": {"risk_score": "Medium", "reasoning": "Default score due to analysis error."},
             "tactic": "Build Trust through Transparency"
         }
 
-# --- 2. The Master Agent (Orchestrator) - UPDATED ---
-async def master_agent(user_message: str, client: AsyncGroq, passed_history: list = None):
+# --- 2. The Master Agent (Orchestrator) ---
+async def master_agent(user_message: str, client, passed_history: list = None, model_name: str = None):
     print("\n🧠 Step 1: Running analysis and knowledge retrieval...")
 
     # Run the consolidated analysis and knowledge retrieval in parallel
-    analysis_task = asyncio.create_task(run_analysis_agent(user_message, client))
+    analysis_task = asyncio.create_task(run_analysis_agent(user_message, client, model_name=model_name))
     knowledge_task = asyncio.create_task(knowledge_retrieval_agent(user_message))
 
     # Await both tasks
     analysis_result, product_info = await asyncio.gather(analysis_task, knowledge_task)
     
     # Deconstruct the analysis results
-    user_profile = analysis_result['profile']
-    risk_info = analysis_result['risk']
-    persuasion_tactic = analysis_result['tactic']
+    user_profile = analysis_result.get('profile', {})
+    risk_info = analysis_result.get('risk', {})
+    persuasion_tactic = analysis_result.get('tactic', 'Build Trust through Transparency')
 
     # Update state
     conversation_state["user_profile"] = user_profile
@@ -98,7 +99,8 @@ async def master_agent(user_message: str, client: AsyncGroq, passed_history: lis
         persuasion_tactic,
         user_profile,
         history,
-        client
+        client,
+        model=model_name
     )
 
     history.append({"role": "user", "content": user_message})
@@ -108,28 +110,22 @@ async def master_agent(user_message: str, client: AsyncGroq, passed_history: lis
 
 # --- 3. Main Application Loop ---
 async def main():
-    print("🚀 Initializing AI Assistant with Groq (Llama 3.3 70B)...")
     load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        print("ERROR: GROQ_API_KEY not found in .env file.")
-        return
+    client, model_name, provider = get_llm_client()
+    print(f"🚀 Initialized AI Assistant with {provider.upper()} ({model_name})")
+    print("🤖 Tata Capital AI Assistant is ready.\n")
     
-    client = AsyncGroq(api_key=api_key)
-    print("✅ AI Assistant is ready.\n")
-    
-    print("🤖 Tata Capital AI Assistant (Groq Llama-3 Powered)\n")
     while True:
         user_input = input("You: ")
         if user_input.lower() in ["exit", "quit"]:
             break
         
         try:
-            reply = await master_agent(user_input, client)
-            print(f"Assistant: {reply}")
+            reply = await master_agent(user_input, client, model_name=model_name)
+            print(f"Assistant: {reply}\n")
         except Exception as e:
             print(f"🚨 An error occurred: {e}")
-            print("Assistant: I'm sorry, I encountered an issue. Please try rephrasing your question.")
+            print("Assistant: I'm sorry, I encountered an issue. Please try rephrasing your question.\n")
 
 if __name__ == "__main__":
     asyncio.run(main())

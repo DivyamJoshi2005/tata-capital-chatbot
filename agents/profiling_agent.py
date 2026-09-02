@@ -27,11 +27,20 @@ async def customer_profiling_agent(user_message: str, model) -> dict:
     """
     
     try:
-        # Use the provided model instance to generate content
-        response = await model.generate_content_async(prompt)
+        if hasattr(model, "chat"):
+            response = await model.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a JSON analysis bot. Always output valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            cleaned_response = response.choices[0].message.content.strip()
+        else:
+            response = await model.generate_content_async(prompt)
+            cleaned_response = response.text.strip().replace("`", "").replace("json", "")
         
-        # Clean up the response to ensure it's valid JSON
-        cleaned_response = response.text.strip().replace("`", "").replace("json", "")
         analysis_result = json.loads(cleaned_response)
         return analysis_result
         

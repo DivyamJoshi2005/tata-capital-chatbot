@@ -33,19 +33,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load environment variables and configure Groq ONCE
+# Load environment variables and configure LLM Client (Ollama or Groq)
 load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    raise RuntimeError("GROQ_API_KEY not found in .env file.")
+from llm_client import get_llm_client
+client, model_name, provider_name = get_llm_client()
 
-# Initialize the Groq client
-client = AsyncGroq(api_key=api_key)
-
-# --- Auto-generate BM25 index if missing ---
-from ingest import BM25_INDEX_PATH, create_knowledge_base_from_json
-if not os.path.exists(BM25_INDEX_PATH):
-    print("⚠️  BM25 index not found. Running ingestion automatically...")
+# --- Auto-generate Chroma index if missing ---
+from ingest import CHROMA_DB_PATH, create_knowledge_base_from_json
+if not os.path.exists(CHROMA_DB_PATH):
+    print("⚠️  Chroma DB not found. Running ingestion automatically...")
     create_knowledge_base_from_json()
     print("✅ Ingestion complete.")
 
@@ -92,7 +88,7 @@ async def create_session():
     return {"id": session_id, "title": "New Chat"}
 
 @app.get("/api/sessions/{session_id}/history")
-async def get_session_history(session_id: str):
+async def get_session_history(session_id: str):d
     return database.get_session_history(session_id)
 
 @app.delete("/api/sessions/{session_id}")
@@ -127,9 +123,8 @@ async def chat_endpoint(request: ChatRequest):
         # Add user's message to database
         database.add_message(session_id, "user", final_message)
 
-        # 3. Call the Agent
-        # Pass the Groq client instead of the Gemini model
-        reply = await master_agent(final_message, client, passed_history=history)
+        # 3. Call the Agent (Ollama or Groq)
+        reply = await master_agent(final_message, client, passed_history=history, model_name=model_name)
 
         # Add assistant's reply to database
         database.add_message(session_id, "assistant", reply)

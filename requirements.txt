@@ -165,3 +165,8 @@ pytesseract
 langchain==0.3.27
 langchain-community==0.3.31
 rank_bm25
+langchain-chroma
+chromadb
+sentence-transformers
+langchain-huggingface
+psutil

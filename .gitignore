@@ -21,3 +21,4 @@ bm25_index.pkl
 
 # Frontend Node modules (usually ignored by frontend/.gitignore, but just in case)
 frontend/node_modules/
+chroma_db/

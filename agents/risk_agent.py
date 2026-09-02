@@ -30,9 +30,20 @@ async def preliminary_risk_agent(user_message: str, model) -> dict:
     """
     
     try:
-        response = await model.generate_content_async(prompt)
-        # Clean up potential markdown formatting from the model
-        cleaned_response = response.text.strip().replace("`", "").replace("json", "")
+        if hasattr(model, "chat"):
+            response = await model.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a credit risk JSON analysis bot. Always output valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            cleaned_response = response.choices[0].message.content.strip()
+        else:
+            response = await model.generate_content_async(prompt)
+            cleaned_response = response.text.strip().replace("`", "").replace("json", "")
+        
         risk_info = json.loads(cleaned_response)
         return risk_info
     except Exception as e:

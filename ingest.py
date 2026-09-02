@@ -1,22 +1,26 @@
 import json
 import os
-import pickle
+
+# Bypass SSL Verification for HuggingFace behind corporate firewalls
+os.environ["CURL_CA_BUNDLE"] = ""
+os.environ["REQUESTS_CA_BUNDLE"] = ""
 # pyrefly: ignore [missing-import]
 from langchain_core.documents import Document
 # pyrefly: ignore [missing-import]
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 # pyrefly: ignore [missing-import]
-from langchain_community.retrievers import BM25Retriever
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 # Use absolute paths relative to this file's directory so it works from any CWD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_DATA_PATH = os.path.join(BASE_DIR, "data", "tata_bfsi_data.json")
-BM25_INDEX_PATH = os.path.join(BASE_DIR, "bm25_index.pkl")
+CHROMA_DB_PATH = os.path.join(BASE_DIR, "chroma_db")
 
 def create_knowledge_base_from_json():
     """
     Loads data from a JSON file, processes it into searchable chunks,
-    and builds a lightweight BM25 keyword index to save memory.
+    and builds a Chroma vector database with HuggingFace embeddings.
     """
     print("Loading data from JSON file...")
     if not os.path.exists(JSON_DATA_PATH):
@@ -46,15 +50,19 @@ def create_knowledge_base_from_json():
     chunked_documents = text_splitter.split_documents(langchain_documents)
     print(f"Split documents into {len(chunked_documents)} chunks.")
 
-    print("Building BM25 Index (Memory-Efficient Keyword Search)...")
-    retriever = BM25Retriever.from_documents(chunked_documents)
+    print("Loading embedding model (all-MiniLM-L6-v2) for Vector Database...")
+    # This model is very lightweight and performs well on CPUs
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-    print(f"Saving BM25 Index to '{BM25_INDEX_PATH}'...")
-    with open(BM25_INDEX_PATH, 'wb') as f:
-        pickle.dump(retriever, f)
+    print(f"Building and saving Chroma Vector Database to '{CHROMA_DB_PATH}'...")
+    Chroma.from_documents(
+        documents=chunked_documents,
+        embedding=embeddings,
+        persist_directory=CHROMA_DB_PATH
+    )
 
     print("\n--- Knowledge Base Creation Complete ---")
-    print(f"BM25 Index has been successfully created and saved to '{BM25_INDEX_PATH}'.")
+    print(f"Chroma Vector DB has been successfully created and saved to '{CHROMA_DB_PATH}'.")
     print("You can now run your main application.")
 
 if __name__ == "__main__":

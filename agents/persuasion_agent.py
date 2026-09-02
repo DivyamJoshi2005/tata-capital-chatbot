@@ -35,9 +35,18 @@ async def persuasion_strategy_agent(user_profile: dict, user_message: str, model
     """
     
     try:
-        response = await model.generate_content_async(prompt)
-        # Clean up the response to ensure it's just the tactic name
-        tactic = response.text.strip().replace('"', '')
+        if hasattr(model, "chat"):
+            response = await model.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a persuasion strategist bot."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1
+            )
+            tactic = response.choices[0].message.content.strip().replace('"', '')
+        else:
+            response = await model.generate_content_async(prompt)
+            tactic = response.text.strip().replace('"', '')
         return tactic
     except Exception as e:
         print(f"Error in persuasion_strategy_agent: {e}")

@@ -1,28 +1,37 @@
 import asyncio
 import os
-import pickle
+
+# Bypass SSL Verification for HuggingFace behind corporate firewalls
+os.environ["CURL_CA_BUNDLE"] = ""
+os.environ["REQUESTS_CA_BUNDLE"] = ""
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
 # Resolve path relative to the project root (parent of this file's directory)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BM25_INDEX_PATH = os.path.join(PROJECT_ROOT, "bm25_index.pkl")
+CHROMA_DB_PATH = os.path.join(PROJECT_ROOT, "chroma_db")
 
 try:
-    print(f"Knowledge Agent: Loading BM25 Index from '{BM25_INDEX_PATH}'...")
-    if os.path.exists(BM25_INDEX_PATH):
-        with open(BM25_INDEX_PATH, 'rb') as f:
-            retriever = pickle.load(f)
-        print("Knowledge Agent: BM25 Index loaded successfully.")
+    print(f"Knowledge Agent: Loading Chroma Vector DB from '{CHROMA_DB_PATH}'...")
+    if os.path.exists(CHROMA_DB_PATH):
+        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        vectorstore = Chroma(
+            persist_directory=CHROMA_DB_PATH, 
+            embedding_function=embeddings
+        )
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        print("Knowledge Agent: Chroma DB loaded successfully.")
     else:
-        print("Knowledge Agent: No BM25 index found. Please run ingest.py first.")
+        print("Knowledge Agent: No Chroma DB found. Please run ingest.py first.")
         retriever = None
 except Exception as e:
-    print(f"FATAL: Could not load BM25 index. Error: {e}")
+    print(f"FATAL: Could not load Chroma DB. Error: {e}")
     retriever = None
 
 
 async def knowledge_retrieval_agent(user_query: str, k: int = 3) -> str:
     """
-    Retrieves the most relevant information from the knowledge base using BM25 keyword search.
+    Retrieves the most relevant information from the knowledge base using vector similarity search.
 
     Args:
         user_query: The user's question or message.
@@ -35,10 +44,8 @@ async def knowledge_retrieval_agent(user_query: str, k: int = 3) -> str:
         return "Error: Knowledge base is not available."
 
     try:
-        print(f"   - Knowledge Agent: Searching for '{user_query}'...")
-        # Since BM25 is CPU-bound, we still run it in a thread to avoid blocking the async event loop
-        # We need to temporarily set the 'k' parameter on the retriever
-        retriever.k = k
+        print(f"   - Knowledge Agent: Searching vector DB for '{user_query}'...")
+        retriever.search_kwargs["k"] = k
         retrieved_docs = await asyncio.to_thread(retriever.invoke, user_query)
 
         if not retrieved_docs:

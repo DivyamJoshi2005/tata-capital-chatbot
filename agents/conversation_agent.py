@@ -8,10 +8,11 @@ async def conversation_agent(
     persuasion_tactic: str,
     user_profile: dict,
     conversation_history: list,
-    client
+    client,
+    model: str = None
 ) -> str:
     """
-    Generates the final, user-facing response by synthesizing all available information using Groq.
+    Generates the final, user-facing response by synthesizing all available information.
 
     Args:
         user_message: The user's latest message.
@@ -19,7 +20,8 @@ async def conversation_agent(
         persuasion_tactic: The recommended strategy from the persuasion agent.
         user_profile: The user's analyzed profile.
         conversation_history: A list of previous user/agent turns.
-        client: An initialized AsyncGroq client instance.
+        client: An initialized client instance (Ollama or Groq).
+        model: The model name to use.
 
     Returns:
         A string containing the final, natural language response for the user.
@@ -53,15 +55,18 @@ async def conversation_agent(
     """
     
     try:
-        response = await client.chat.completions.create(
-            messages=[
+        kwargs = {
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            model="llama-3.3-70b-versatile",
-            temperature=0.7,
-            max_tokens=1024,
-        )
+            "temperature": 0.7,
+            "max_tokens": 1024,
+        }
+        if model:
+            kwargs["model"] = model
+
+        response = await client.chat.completions.create(**kwargs)
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Error in conversation_agent: {e}")
