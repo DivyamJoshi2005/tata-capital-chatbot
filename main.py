@@ -59,7 +59,7 @@ async def run_analysis_agent(user_message: str, client, model_name: str = None) 
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
-	    "max_tokens":256,
+            "max_tokens": 1024,
         }
 
         if model_name:
@@ -131,33 +131,37 @@ async def run_analysis_agent(user_message: str, client, model_name: str = None) 
             "tactic": "Build Trust through Transparency",
         }
 
+async def update_profile_background(user_message: str, client, model_name: str = None):
+    try:
+        analysis_result = await run_analysis_agent(user_message, client, model_name=model_name)
+        conversation_state["user_profile"] = analysis_result.get('profile', {})
+        conversation_state["risk_score"] = analysis_result.get('risk', {})
+        conversation_state["tactic"] = analysis_result.get('tactic', 'Build Trust through Transparency')
+        print(f"   [Background] Profile Updated: {conversation_state['user_profile']}")
+    except Exception as e:
+        print(f"Background profiling error: {e}")
+
 # --- 2. The Master Agent (Orchestrator) ---
 async def master_agent(user_message: str, client, passed_history: list = None, model_name: str = None):
-    print("\n🧠 Step 1: Running analysis and knowledge retrieval...")
+    print("\n🧠 Step 1: Starting background analysis and knowledge retrieval...")
 
-    # Run the consolidated analysis and knowledge retrieval in parallel
-    analysis_task = asyncio.create_task(run_analysis_agent(user_message, client, model_name=model_name))
-    knowledge_task = asyncio.create_task(knowledge_retrieval_agent(user_message))
-
-    # Await both tasks
-    analysis_result, product_info = await asyncio.gather(analysis_task, knowledge_task)
+    # Start analysis in the background so it doesn't block the response!
+    asyncio.create_task(update_profile_background(user_message, client, model_name))
     
-    # Deconstruct the analysis results
-    user_profile = analysis_result.get('profile', {})
-    risk_info = analysis_result.get('risk', {})
-    persuasion_tactic = analysis_result.get('tactic', 'Build Trust through Transparency')
-
-    # Update state
-    conversation_state["user_profile"] = user_profile
-    conversation_state["risk_score"] = risk_info
-    print(f"   - Profile: {user_profile}")
-    print(f"   - Risk: {risk_info}")
-    print(f"   - Tactic: {persuasion_tactic}")
+    # Only wait for knowledge retrieval
+    product_info = await knowledge_retrieval_agent(user_message)
+    
+    # Use the existing state (which updates in the background for the NEXT turn)
+    user_profile = conversation_state.get("user_profile", {})
+    risk_info = conversation_state.get("risk_score", {})
+    persuasion_tactic = conversation_state.get("tactic", "Build Trust through Transparency")
 
     history = passed_history if passed_history is not None else conversation_state["conversation_history"]
 
-    print("💬 Step 2: Generating final response...")
-    final_response = await conversation_agent(
+    print("💬 Step 2: Generating streaming response...")
+    
+    # Yield chunks from the streaming conversation agent
+    async for chunk in conversation_agent(
         user_message,
         product_info,
         persuasion_tactic,
@@ -165,12 +169,11 @@ async def master_agent(user_message: str, client, passed_history: list = None, m
         history,
         client,
         model=model_name
-    )
+    ):
+        yield chunk
 
     history.append({"role": "user", "content": user_message})
-    history.append({"role": "assistant", "content": final_response})
-
-    return final_response
+    history.append({"role": "assistant", "content": "[Streamed Response]"})
 
 # --- 3. Main Application Loop ---
 async def main():
@@ -185,8 +188,12 @@ async def main():
             break
         
         try:
-            reply = await master_agent(user_input, client, model_name=model_name)
-            print(f"Assistant: {reply}\n")
+            print("Assistant: ", end="", flush=True)
+            full_reply = ""
+            async for chunk in master_agent(user_input, client, model_name=model_name):
+                print(chunk, end="", flush=True)
+                full_reply += chunk
+            print("\n")
         except Exception as e:
             print(f"🚨 An error occurred: {e}")
             print("Assistant: I'm sorry, I encountered an issue. Please try rephrasing your question.\n")

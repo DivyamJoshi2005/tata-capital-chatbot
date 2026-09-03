@@ -188,11 +188,34 @@ export default function App() {
 
       if (!res.ok) throw new Error('API Error');
 
-      const data = await res.json();
-      setMessages(data.updated_history);
-      if (!currentSessionId || currentSessionId !== data.session_id) {
-        setCurrentSessionId(data.session_id);
+      const returnedSessionId = res.headers.get("X-Session-Id");
+      if (returnedSessionId && (!currentSessionId || currentSessionId !== returnedSessionId)) {
+        setCurrentSessionId(returnedSessionId);
       }
+
+      if (res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        
+        // Add an empty assistant message that we will stream into
+        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+        setIsLoading(false);
+
+        let assistantMessage = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          assistantMessage += chunk;
+          
+          setMessages(prev => {
+            const newMsgs = [...prev];
+            newMsgs[newMsgs.length - 1].content = assistantMessage;
+            return newMsgs;
+          });
+        }
+      }
+      
       fetchSessions(); // Refresh sidebar titles
     } catch (error) {
       console.error(error);

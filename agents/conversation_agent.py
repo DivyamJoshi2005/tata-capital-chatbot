@@ -61,13 +61,15 @@ async def conversation_agent(
                 {"role": "user", "content": user_message}
             ],
             "temperature": 0.7,
-            "max_tokens": 512,
+            "max_tokens": 1536,
         }
         if model:
             kwargs["model"] = model
 
-        response = await client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content.strip()
+        # Stream the response instead of blocking
+        async for chunk in client.chat.completions.create_stream(**kwargs):
+            yield chunk
+            
     except Exception as e:
         print(f"Error in conversation_agent: {e}")
-        return "I'm sorry, I'm having a little trouble processing that. Could you please rephrase your question?"
+        yield "I'm sorry, I'm having a little trouble processing that. Could you please rephrase your question?"

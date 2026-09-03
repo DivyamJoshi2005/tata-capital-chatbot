@@ -100,6 +100,42 @@ class OllamaChatCompletions:
             print(f"[Ollama Error] Chat completion failed: {e}")
             raise e
 
+    async def create_stream(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ):
+        import httpx
+        target_model = model or self.default_model
+        endpoint = f"{self.base_url}/api/chat"
+
+        payload = {
+            "model": target_model,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": temperature,
+            }
+        }
+        if max_tokens:
+            payload["options"]["num_predict"] = max_tokens
+
+        try:
+            async with httpx.AsyncClient() as client:
+                async with client.stream("POST", endpoint, json=payload, timeout=None) as response:
+                    async for line in response.aiter_lines():
+                        if line:
+                            data = json.loads(line)
+                            content = data.get("message", {}).get("content", "")
+                            if content:
+                                yield content
+        except Exception as e:
+            print(f"[Ollama Stream Error]: {e}")
+            yield " [Connection Error]"
+
 
 class OllamaChat:
     def __init__(self, base_url: str, default_model: str):
