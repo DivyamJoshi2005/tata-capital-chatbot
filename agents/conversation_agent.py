@@ -61,7 +61,7 @@ async def conversation_agent(
                 {"role": "user", "content": user_message}
             ],
             "temperature": 0.7,
-            "max_tokens": 1024,
+            "max_tokens": 512,
         }
         if model:
             kwargs["model"] = model

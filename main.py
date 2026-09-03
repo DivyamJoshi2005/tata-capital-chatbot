@@ -59,6 +59,7 @@ async def run_analysis_agent(user_message: str, client, model_name: str = None) 
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
+	    "max_tokens":256,
         }
 
         if model_name:
