@@ -19,7 +19,7 @@ try:
             persist_directory=CHROMA_DB_PATH, 
             embedding_function=embeddings
         )
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 6})
         print("Knowledge Agent: Chroma DB loaded successfully.")
     else:
         print("Knowledge Agent: No Chroma DB found. Please run ingest.py first.")
@@ -29,7 +29,7 @@ except Exception as e:
     retriever = None
 
 
-async def knowledge_retrieval_agent(user_query: str, k: int = 3) -> str:
+async def knowledge_retrieval_agent(user_query: str, k: int = 6) -> str:
     """
     Retrieves the most relevant information from the knowledge base using vector similarity search.
 

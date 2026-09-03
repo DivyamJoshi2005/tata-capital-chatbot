@@ -24,47 +24,110 @@ conversation_state = {
 # --- Consolidated Analysis Agent ---
 async def run_analysis_agent(user_message: str, client, model_name: str = None) -> dict:
     """
-    A single agent that performs profiling, risk assessment, and persuasion strategy selection
-    in one call using JSON mode for maximum efficiency.
-    Works seamlessly with both local Ollama (Llama 3.2 3B) and Groq.
+    A single agent that performs profiling, risk assessment, and persuasion strategy
+    selection in one call using JSON mode.
+
+    Handles DeepSeek reasoning output and Markdown JSON fences safely.
     """
     prompt = f"""
     You are a multi-tasking financial analysis AI. Analyze the user's message and provide a complete analysis.
     User Message: "{user_message}"
 
     Your tasks are:
-    1.  **Profile the User:** Determine their sentiment, financial literacy, and persona.
-    2.  **Assess Risk:** Provide a preliminary risk score (Low, Medium, High) and a brief justification.
-    3.  **Select a Persuasion Tactic:** Choose the best tactic to persuade them to take a loan.
+    1. Profile the User: Determine their sentiment, financial literacy, and persona.
+    2. Assess Risk: Provide a preliminary risk score (Low, Medium, High) and a brief justification.
+    3. Select a Persuasion Tactic: Choose the best tactic to persuade them to take a loan.
 
-    Return your complete analysis ONLY as a single, valid JSON object with three main keys:
+    Return your complete analysis ONLY as a single valid JSON object with three main keys:
     - "profile": A JSON object with "sentiment", "literacy", and "persona".
     - "risk": A JSON object with "risk_score" and "reasoning".
     - "tactic": A string containing the chosen persuasion tactic.
     """
+
     try:
         kwargs = {
             "messages": [
-                {"role": "system", "content": "You are a JSON analysis bot. Always output valid JSON."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a JSON analysis bot. "
+                        "Return only the JSON object. "
+                        "Do not include explanations, reasoning, Markdown, or code fences."
+                    ),
+                },
+                {"role": "user", "content": prompt},
             ],
             "response_format": {"type": "json_object"},
             "temperature": 0.1,
         }
+
         if model_name:
             kwargs["model"] = model_name
 
         response = await client.chat.completions.create(**kwargs)
-        cleaned_response = response.choices[0].message.content.strip()
-        analysis = json.loads(cleaned_response)
+
+        raw_response = response.choices[0].message.content or ""
+        cleaned_response = raw_response.strip()
+
+        # Remove DeepSeek reasoning if present.
+        if "</think>" in cleaned_response:
+            cleaned_response = cleaned_response.split("</think>", 1)[1].strip()
+
+        # Remove Markdown code fences if present.
+        if cleaned_response.startswith("```"):
+            lines = cleaned_response.splitlines()
+
+            if lines and lines[0].strip().startswith("```"):
+                lines = lines[1:]
+
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+
+            cleaned_response = "\n".join(lines).strip()
+
+        # Extract the JSON object if there is still surrounding text.
+        start = cleaned_response.find("{")
+        end = cleaned_response.rfind("}")
+
+        if start == -1 or end == -1 or end <= start:
+            raise ValueError(
+                f"No valid JSON object found in model response: {raw_response[:500]}"
+            )
+
+        json_text = cleaned_response[start:end + 1]
+
+        analysis = json.loads(json_text)
+
+        # Validate the expected structure.
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis response is not a JSON object.")
+
+        if not isinstance(analysis.get("profile"), dict):
+            raise ValueError("Missing or invalid 'profile' object.")
+
+        if not isinstance(analysis.get("risk"), dict):
+            raise ValueError("Missing or invalid 'risk' object.")
+
+        if not isinstance(analysis.get("tactic"), str):
+            raise ValueError("Missing or invalid 'tactic'.")
+
         return analysis
+
     except Exception as e:
         print(f"Error in consolidated analysis agent: {e}")
-        # Return a safe default structure on error
+
+        # Return a safe default structure on error.
         return {
-            "profile": {"sentiment": "neutral", "literacy": "medium", "persona": "Inquirer"},
-            "risk": {"risk_score": "Medium", "reasoning": "Default score due to analysis error."},
-            "tactic": "Build Trust through Transparency"
+            "profile": {
+                "sentiment": "neutral",
+                "literacy": "medium",
+                "persona": "Inquirer",
+            },
+            "risk": {
+                "risk_score": "Medium",
+                "reasoning": "Default score due to analysis error.",
+            },
+            "tactic": "Build Trust through Transparency",
         }
 
 # --- 2. The Master Agent (Orchestrator) ---
