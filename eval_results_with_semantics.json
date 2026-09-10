@@ -301,36 +301,6 @@
     },
     {
         "model": "llama3.2:3b",
-        "question_id": 2,
-        "question": "What are the interest rates for a Tata Capital home loan?",
-        "category": "Product Specs",
-        "retrieved_context": "--- Relevant Information ---\nSource 1 (from https://www.tatacapital.com/home-loan/rates-and-charges.html):\nTitle: Home Loan Interest Rates 2026: Lowest Rates | Tata Capital\n\nSource 2 (from https://www.tatacapital.com/blog/loan-for-home/tips-for-lowering-home-loan-interest-rates/):\nTitle: How to Get Lower Interest Rate on Home Loan | Tata Capital\n\nSource 3 (from https://www.tatacapital.com/loan-against-property/rates-and-charges.html):\nTitle: Loan Against Property Interest Rates 2026 | Tata Capital",
-        "response": "Unfortunately, the provided sources do not mention specific interest rates for a Tata Capital home loan. However, they do provide general information on how to get a lower interest rate on a home loan and the interest rates for a loan against property.\n\nTo find the current interest rates for a Tata Capital home loan, I would recommend visiting the official website of Tata Capital or contacting their customer service directly. They may be able to provide you with the most up-to-date and accurate information on their current interest rates.",
-        "metrics": {
-            "latency_seconds": 19.36,
-            "tokens_generated": 100,
-            "tokens_per_second": 8.49,
-            "memory_used_mb": 478.09,
-            "semantic_score": 6
-        }
-    },
-    {
-        "model": "qwen2.5:3b",
-        "question_id": 2,
-        "question": "What are the interest rates for a Tata Capital home loan?",
-        "category": "Product Specs",
-        "retrieved_context": "--- Relevant Information ---\nSource 1 (from https://www.tatacapital.com/home-loan/rates-and-charges.html):\nTitle: Home Loan Interest Rates 2026: Lowest Rates | Tata Capital\n\nSource 2 (from https://www.tatacapital.com/blog/loan-for-home/tips-for-lowering-home-loan-interest-rates/):\nTitle: How to Get Lower Interest Rate on Home Loan | Tata Capital\n\nSource 3 (from https://www.tatacapital.com/loan-against-property/rates-and-charges.html):\nTitle: Loan Against Property Interest Rates 2026 | Tata Capital",
-        "response": "Based on the information provided in the sources, there are no specific interest rate details for Tata Capital home loans available. The sources cover different aspects related to home loans from Tata Capital, such as interest rates for home loans and loan against property, but they do not provide the specific interest rates for home loans. For accurate and up-to-date interest rates, it is recommended to visit the official Tata Capital website or contact their customer service directly.",
-        "metrics": {
-            "latency_seconds": 18.39,
-            "tokens_generated": 88,
-            "tokens_per_second": 11.48,
-            "memory_used_mb": 579.7,
-            "semantic_score": 4
-        }
-    },
-    {
-        "model": "llama3.2:3b",
         "question_id": 1,
         "question": "What is the maximum amount I can get for a personal loan?",
         "category": "Product Specs",
@@ -342,6 +312,21 @@
             "tokens_per_second": 10.8,
             "memory_used_mb": 457.79,
             "semantic_score": 8
+        }
+    },
+    {
+        "model": "llama3.2:3b",
+        "question_id": 2,
+        "question": "What are the interest rates for a Tata Capital home loan?",
+        "category": "Product Specs",
+        "retrieved_context": "--- Relevant Information ---\nSource 1 (from https://www.tatacapital.com/home-loan/rates-and-charges.html):\nTitle: Home Loan Interest Rates 2026: Lowest Rates | Tata Capital\n\nSource 2 (from https://www.tatacapital.com/blog/loan-for-home/tips-for-lowering-home-loan-interest-rates/):\nTitle: How to Get Lower Interest Rate on Home Loan | Tata Capital\n\nSource 3 (from https://www.tatacapital.com/loan-against-property/rates-and-charges.html):\nTitle: Loan Against Property Interest Rates 2026 | Tata Capital",
+        "response": "Unfortunately, the provided sources do not mention specific interest rates for a Tata Capital home loan. However, they do provide general information on how to get a lower interest rate on a home loan and the interest rates for a loan against property.\n\nTo find the current interest rates for a Tata Capital home loan, I would recommend visiting the official website of Tata Capital or contacting their customer service directly. They may be able to provide you with the most up-to-date and accurate information on their current interest rates.",
+        "metrics": {
+            "latency_seconds": 19.36,
+            "tokens_generated": 100,
+            "tokens_per_second": 8.49,
+            "memory_used_mb": 478.09,
+            "semantic_score": 6
         }
     },
     {
@@ -627,6 +612,21 @@
             "tokens_per_second": 8.97,
             "memory_used_mb": 100.25,
             "semantic_score": 6
+        }
+    },
+    {
+        "model": "qwen2.5:3b",
+        "question_id": 2,
+        "question": "What are the interest rates for a Tata Capital home loan?",
+        "category": "Product Specs",
+        "retrieved_context": "--- Relevant Information ---\nSource 1 (from https://www.tatacapital.com/home-loan/rates-and-charges.html):\nTitle: Home Loan Interest Rates 2026: Lowest Rates | Tata Capital\n\nSource 2 (from https://www.tatacapital.com/blog/loan-for-home/tips-for-lowering-home-loan-interest-rates/):\nTitle: How to Get Lower Interest Rate on Home Loan | Tata Capital\n\nSource 3 (from https://www.tatacapital.com/loan-against-property/rates-and-charges.html):\nTitle: Loan Against Property Interest Rates 2026 | Tata Capital",
+        "response": "Based on the information provided in the sources, there are no specific interest rate details for Tata Capital home loans available. The sources cover different aspects related to home loans from Tata Capital, such as interest rates for home loans and loan against property, but they do not provide the specific interest rates for home loans. For accurate and up-to-date interest rates, it is recommended to visit the official Tata Capital website or contact their customer service directly.",
+        "metrics": {
+            "latency_seconds": 18.39,
+            "tokens_generated": 88,
+            "tokens_per_second": 11.48,
+            "memory_used_mb": 579.7,
+            "semantic_score": 4
         }
     },
     {

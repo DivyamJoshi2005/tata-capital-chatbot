@@ -3,12 +3,7 @@
   {"id": 2, "category": "Product Specs", "question": "What are the interest rates for a Tata Capital home loan?"},
   {"id": 3, "category": "Eligibility", "question": "Can an 18-year-old apply for a personal loan?"},
   {"id": 4, "category": "Eligibility", "question": "What is the minimum credit score required for a business loan?"},
-  {"id": 5, "category": "Eligibility", 
-  
-  
-  
-  
-  "question": "What documents are required for a salaried person applying for a home loan?"},
+  {"id": 5, "category": "Eligibility", "question": "What documents are required for a salaried person applying for a home loan?"},
   {"id": 6, "category": "Fees", "question": "What are the foreclosure charges for a personal loan?"},
   {"id": 7, "category": "Fees", "question": "What is an EMI bounce charge and why does it matter?"},
   {"id": 8, "category": "Fees", "question": "Are there any hidden processing fees for vehicle loans?"},

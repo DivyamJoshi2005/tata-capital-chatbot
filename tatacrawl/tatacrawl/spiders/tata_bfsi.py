@@ -59,5 +59,5 @@ class TataBFSISpider(CrawlSpider):
             yield {
                 "url": response.url,
                 "title": response.xpath("//title/text()").get(),
-                "text": page_text[:5000]  # extract first 5000 chars of cleaned content
+                "text": page_text  # extract full cleaned content
             }

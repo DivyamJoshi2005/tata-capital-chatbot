@@ -59,36 +59,8 @@ def clean_page_text(text: str) -> str:
 
     cleaned = text.strip()
 
-    # Find the beginning of the repeated navigation.
-    # Many scraped pages start with this same navigation block.
-    navigation_start = cleaned.find(
-        "Personal Loan Home Loan Business Loan Vehicle Loan"
-    )
-
-    if navigation_start != -1:
-        # Look for the end of the repeated navigation area.
-        possible_end_markers = [
-            "Register as a Selling Agent.",
-            "Explore all Business Loans",
-            "Pioneering Climate Finance",
-        ]
-
-        end_position = -1
-
-        for marker in possible_end_markers:
-            position = cleaned.find(marker, navigation_start)
-
-            if position != -1:
-                marker_end = position + len(marker)
-
-                if end_position == -1 or marker_end < end_position:
-                    end_position = marker_end
-
-        if end_position != -1:
-            cleaned = (
-                cleaned[:navigation_start]
-                + cleaned[end_position:]
-            )
+    # Navigation menu removal logic removed to prevent accidental deletion of article body.
+    # RecursiveCharacterTextSplitter and vector search will handle noise well enough.
 
     # Remove excessive whitespace
     cleaned = "\n".join(
