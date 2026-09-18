@@ -143,6 +143,19 @@ async def update_profile_background(user_message: str, client, model_name: str =
 
 # --- 2. The Master Agent (Orchestrator) ---
 async def master_agent(user_message: str, client, passed_history: list = None, model_name: str = None):
+    # --- Guardrail: Input Checking ---
+    from guardrails import is_input_safe, check_scope_and_relevance
+    
+    is_safe, reason = is_input_safe(user_message)
+    if not is_safe:
+        yield reason
+        return
+        
+    is_in_scope, scope_reason = await check_scope_and_relevance(user_message, client, model_name)
+    if not is_in_scope:
+        yield scope_reason
+        return
+
     print("\n🧠 Step 1: Starting background analysis and knowledge retrieval...")
 
     # Start analysis in the background so it doesn't block the response!
